@@ -12,9 +12,8 @@ The example endpoint is a placeholder. Swap in whatever your service does.
 
 ```sh
 npm install
-cp .env.example .env.local
-npm run wallet          # prints PAY_TO and SELLER_PRIVATE_KEY; paste both into .env.local
-npm run dev
+npm run wallet          # creates .env.local with a new service wallet (PAY_TO + SELLER_PRIVATE_KEY)
+npm run dev             # http://localhost:3000 (docs page; if the port differs, set NEXT_PUBLIC_APP_URL)
 ```
 
 Check the paywall:
@@ -23,11 +22,17 @@ Check the paywall:
 curl -i "http://localhost:3000/api/example?name=agent"   # → 402 with a PAYMENT-REQUIRED header
 ```
 
-Pay for a call like a buyer agent would. Create a second wallet with `npm run wallet`, get test USDC for it at [faucet.circle.com](https://faucet.circle.com) (Arc testnet), and put its key in `BUYER_PRIVATE_KEY`:
+Pay for a call like a buyer agent would:
 
 ```sh
+npm run wallet -- buyer   # adds a test buyer (BUYER_PRIVATE_KEY) and prints its address
+# fund that address with test USDC at https://faucet.circle.com (Arc Testnet), then:
 npm run pay -- "http://localhost:3000/api/example?name=agent"
 ```
+
+`npm run pay` reads `.env.local` (including `NETWORK`) and exits non-zero if the call isn't paid.
+If anything is misconfigured, the docs page lists what to fix (in development), the server log
+says the same, and paid calls return 503 instead of charging anyone.
 
 ## Add your own endpoint
 
@@ -45,13 +50,19 @@ export const GET = paid('/api/<name>', async (req: NextRequest) => {
 });
 ```
 
-The docs page, `/llms.txt`, and the MCP `list_paid_endpoints` tool update from the same list. A payment settles only if your handler succeeds, so buyers never pay for errors.
+Use `export const POST = paid(...)` for POST endpoints (set `method: 'POST'` in `endpoints.ts`).
+The docs page, `/llms.txt`, and the MCP `list_paid_endpoints` tool update from the same list. A
+payment settles only if your handler succeeds, so buyers never pay for errors (tested: a handler
+returning 500 charged nothing).
 
 ## Go live
 
 1. Deploy (e.g. `npx vercel`) and set the variables from `.env.example`, including `NEXT_PUBLIC_APP_URL`.
 2. For real payments set `NETWORK=arc` (or `base`).
-3. The keyless trial allows a limited number of settlements per `PAY_TO`. After that, create a key in [Circle Console](https://console.circle.com), set `CIRCLE_API_KEY`, and remove `SELLER_PRIVATE_KEY` from the server.
+3. The keyless trial works on mainnet too, with a limited number of settlements per `PAY_TO`
+   (counted separately per network). After that, create a key in
+   [Circle Console](https://console.circle.com), set `CIRCLE_API_KEY`, and remove
+   `SELLER_PRIVATE_KEY` from the server.
 
 ## Networks
 

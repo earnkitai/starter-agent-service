@@ -1,4 +1,4 @@
-import { getAppDescription, getAppName, getAppUrl, getNetwork } from '@/lib/config';
+import { configProblems, getAppDescription, getAppName, getAppUrl, safeNetwork } from '@/lib/config';
 import { ENDPOINTS } from '@/lib/endpoints';
 import { TOOLS } from '@/lib/tools/registry';
 
@@ -13,15 +13,27 @@ const Code = ({ children }: { children: string }) => (
 
 export default function AgentsPage() {
   const appUrl = getAppUrl();
-  const network = getNetwork();
+  const network = safeNetwork();
+  // Setup problems are shown only in development; in production callers just see the docs.
+  const problems = process.env.NODE_ENV === 'production' ? [] : configProblems();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 font-mono text-sm leading-relaxed">
+      {problems.length > 0 ? (
+        <section className="mb-10 rounded-md border border-amber-500/60 p-4">
+          <p className="font-semibold">Setup needed before this service can take payments:</p>
+          <ul className="mt-2 list-disc pl-5">
+            {problems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <header className="mb-10">
         <h1 className="text-2xl font-bold">{getAppName()}</h1>
         <p className="mt-2 text-[var(--muted)]">{getAppDescription()}</p>
         <p className="mt-4 text-[var(--muted)]">
-          Paid per call in USDC on {network.label} ({network.id}) via x402. Machine-readable:{' '}
+          Paid per call in USDC{network ? ` on ${network.label} (${network.id})` : ''} via x402. Machine-readable:{' '}
           <a className="underline" href="/llms.txt">/llms.txt</a>
         </p>
       </header>
